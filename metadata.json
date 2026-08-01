@@ -1,0 +1,6 @@
+{
+  "name": "File Manager",
+  "description": "The fastest, cleanest, most reliable File Manager for Android, with Material You styling, dual-pane layout, local search, file viewer/editor, and secure folder vault.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
