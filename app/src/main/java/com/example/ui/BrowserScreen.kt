@@ -2,6 +2,10 @@ package com.example.ui
 
 import android.os.Environment
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -52,6 +56,15 @@ fun BrowserScreen(
     val sortAscending by viewModel.sortAscending.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filterType by viewModel.filterType.collectAsState()
+
+    val context = LocalContext.current
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.importFileFromUri(context, it)
+        }
+    }
 
     // Dialog trigger states
     var showCreateFolderDialog by remember { mutableStateOf(false) }
@@ -120,6 +133,13 @@ fun BrowserScreen(
         },
         floatingActionButton = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FloatingActionButton(
+                    onClick = { filePickerLauncher.launch("*/*") },
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.testTag("fab_fetch_file")
+                ) {
+                    Icon(Icons.Default.CloudDownload, "Fetch from Device")
+                }
                 FloatingActionButton(
                     onClick = { showCreateFileDialog = true },
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -427,7 +447,7 @@ fun handleFileClick(
         viewModel.addToRecent(file)
         val ext = file.extension.lowercase()
         when {
-            ext in listOf("txt", "json", "xml", "html", "md") -> onOpenTextFile(file.path)
+            ext in listOf("txt", "json", "xml", "html", "md", "js", "ts", "kt", "java", "css", "py", "sh", "cpp", "c", "h", "yaml", "yml", "properties", "gradle", "ini", "conf", "bat", "sql", "log") -> onOpenTextFile(file.path)
             ext in listOf("jpg", "jpeg", "png", "gif", "webp") -> onPreviewImage(file.path)
             ext in listOf("mp3", "wav", "m4a") -> onPreviewAudio(file.path)
             ext == "pdf" -> onPreviewPdf(file.path)
@@ -435,6 +455,7 @@ fun handleFileClick(
             ext == "zip" -> {
                 viewModel.extractArchive(file.path)
             }
+            else -> onOpenTextFile(file.path) // Fallback: open any other file type in the built-in text editor
         }
     }
 }

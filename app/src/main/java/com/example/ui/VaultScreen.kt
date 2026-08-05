@@ -358,7 +358,7 @@ fun VaultBrowserView(
                 }
             }
             collect(sandboxRoot)
-            importableFiles = list.filter { !it.name.startsWith(".") && it.extension != "zip" }
+            importableFiles = list.filter { !it.name.startsWith(".") }
         }
     }
 

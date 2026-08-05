@@ -16,6 +16,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.UUID
 import android.webkit.MimeTypeMap
+import android.net.Uri
 
 class FileManagerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -509,6 +510,57 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun lockVault() {
         _vaultState.value = VaultState.LOCKED
+    }
+
+    fun importFileFromUri(context: Context, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isOperating.value = true
+            _operationLabel.value = "Fetching file..."
+            _operationProgress.value = 0.1f
+
+            try {
+                val contentResolver = context.contentResolver
+                var name = "imported_file"
+                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                        name = cursor.getString(nameIndex)
+                    }
+                }
+
+                val destFile = File(_currentPath.value, name)
+                _operationLabel.value = "Copying: $name"
+
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    destFile.outputStream().use { outputStream ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        var totalRead = 0L
+                        var fileSize = 0L
+                        try {
+                            contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+                                fileSize = afd.length
+                            }
+                        } catch (e: Exception) {}
+
+                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                            outputStream.write(buffer, 0, bytesRead)
+                            totalRead += bytesRead
+                            if (fileSize > 0) {
+                                _operationProgress.value = totalRead.toFloat() / fileSize
+                            }
+                        }
+                    }
+                }
+                _operationProgress.value = 1.0f
+                _isOperating.value = false
+
+                loadFiles()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isOperating.value = false
+            }
+        }
     }
 
     fun importFileToVault(filePath: String) {
